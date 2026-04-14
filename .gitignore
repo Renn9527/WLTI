@@ -1,5 +1,8 @@
 .vscode/
 _share/
+Netlify/
+Vercel/
+za/
 *.zip
 photo/_source/
 WLTI题目设计.md

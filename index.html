@@ -27,10 +27,15 @@
             <h1 class="main-title">王蕾倾向指数测试</h1>
             <p class="subtitle">MBTI过时了，SBTI过时了，CSTI过时了——WLTI的时代来了</p>
             <p class="description">来看看你是哪种王蕾！</p>
+            <div class="variant-selector">
+                <p class="variant-selector-title">选择测试版本</p>
+                <div class="variant-grid" id="quiz-variants" role="radiogroup" aria-label="测试版本"></div>
+                <p class="variant-caption" id="variant-caption"></p>
+            </div>
             <button class="btn-primary" onclick="startTest()">开始测试</button>
             <div class="info">
                 <p>📊 共<span id="question-count">25</span>道题</p>
-                <p>⏱️ 预计用时5分钟</p>
+                <p>⏱️ 预计用时<span id="estimated-minutes">5</span>分钟</p>
                 <p>🎯 测试你的王蕾人格类型</p>
             </div>
         </div>
@@ -78,6 +83,7 @@
     </footer>
 
     <script src="questions.js"></script>
+    <script src="quiz-variants.js"></script>
     <script src="results.js"></script>
     <script src="app.js"></script>
 </body>

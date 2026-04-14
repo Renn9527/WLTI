@@ -1,18 +1,19 @@
 // 全局状态
 let currentQuestion = 0;
+let currentVariantId = typeof defaultQuizVariantId === 'string' ? defaultQuizVariantId : 'full25';
 let answers = [];
-let scores = {
-    W: 0,  // 抽象度
-    L: 0,  // 撒娇度
-    T: 0,  // 冲动度
-    I: 0,  // 反撩度
-    Q: 0   // 气质度
-};
+let scores = createEmptyScores();
 const AUTO_ADVANCE_DELAY = 300;
+const PRELOAD_WINDOW_SIZE = 6;
 let autoAdvanceTimer = null;
 const preloadedResultImages = new Set();
+const questionListCache = new Map();
 
-function getQuestionList() {
+function createEmptyScores() {
+    return { W: 0, L: 0, T: 0, I: 0, Q: 0 };
+}
+
+function getAllQuestions() {
     if (typeof questions === 'undefined' || !Array.isArray(questions)) {
         throw new Error('questions.js 未正确加载，无法开始测试。');
     }
@@ -20,11 +21,34 @@ function getQuestionList() {
     return questions;
 }
 
-// 页面切换
+function getCurrentVariant() {
+    if (typeof getQuizVariantConfig !== 'function') {
+        throw new Error('quiz-variants.js 未正确加载，无法读取测试版本配置。');
+    }
+
+    return getQuizVariantConfig(currentVariantId);
+}
+
+function getQuestionList(variantId = currentVariantId) {
+    if (questionListCache.has(variantId)) {
+        return questionListCache.get(variantId);
+    }
+
+    const variant = getQuizVariantConfig(variantId);
+    const order = new Map(variant.questionIds.map((id, index) => [id, index]));
+    const questionBank = getAllQuestions()
+        .filter(question => order.has(question.id))
+        .sort((left, right) => order.get(left.id) - order.get(right.id));
+
+    questionListCache.set(variantId, questionBank);
+    return questionBank;
+}
+
 function showPage(pageId) {
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
     });
+
     document.getElementById(pageId).classList.add('active');
 }
 
@@ -57,16 +81,81 @@ function preloadResultImage(imageName) {
     preloadedResultImages.add(imageName);
 }
 
+function renderVariantOptions() {
+    const variantContainer = document.getElementById('quiz-variants');
+
+    if (!variantContainer) {
+        return;
+    }
+
+    variantContainer.innerHTML = '';
+
+    Object.values(quizVariants).forEach(variant => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'variant-card';
+        button.dataset.variantId = variant.id;
+        button.setAttribute('role', 'radio');
+        button.setAttribute('aria-checked', String(variant.id === currentVariantId));
+        button.addEventListener('click', () => selectVariant(variant.id));
+
+        const label = document.createElement('span');
+        label.className = 'variant-card-label';
+        label.textContent = variant.label;
+
+        const meta = document.createElement('span');
+        meta.className = 'variant-card-meta';
+        meta.textContent = `${variant.questionCount} 题 · 约 ${variant.estimatedMinutes} 分钟`;
+
+        button.appendChild(label);
+        button.appendChild(meta);
+        variantContainer.appendChild(button);
+    });
+
+    updateVariantSelectionState();
+}
+
+function updateVariantSelectionState() {
+    document.querySelectorAll('.variant-card').forEach(button => {
+        const isActive = button.dataset.variantId === currentVariantId;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-checked', String(isActive));
+    });
+}
+
+function updateVariantSummary() {
+    const variant = getCurrentVariant();
+    const questionCount = String(variant.questionCount);
+
+    document.getElementById('question-count').textContent = questionCount;
+    document.getElementById('total-questions').textContent = questionCount;
+    document.getElementById('estimated-minutes').textContent = String(variant.estimatedMinutes);
+    document.getElementById('variant-caption').textContent = `${variant.shortLabel}：${variant.description}`;
+    document.querySelector('.progress-bar').setAttribute('aria-valuemax', questionCount);
+    updateVariantSelectionState();
+}
+
+function selectVariant(variantId) {
+    currentVariantId = variantId;
+    currentQuestion = 0;
+    answers = [];
+    scores = createEmptyScores();
+    clearAutoAdvanceTimer();
+    updateVariantSummary();
+}
+
 function buildEstimatedScores() {
-    const estimatedScores = { W: 0, L: 0, T: 0, I: 0, Q: 0 };
+    const estimatedScores = createEmptyScores();
     const questionBank = getQuestionList();
 
     questionBank.forEach((question, questionIndex) => {
         if (answers[questionIndex] !== undefined) {
             const selectedOption = question.options[answers[questionIndex]];
+
             Object.entries(selectedOption.scores).forEach(([dimension, score]) => {
                 estimatedScores[dimension] += score;
             });
+
             return;
         }
 
@@ -79,13 +168,14 @@ function buildEstimatedScores() {
 }
 
 function maybePreloadLikelyResult() {
-    const preloadStartQuestionIndex = Math.max(getQuestionList().length - 6, 0);
+    const questionBank = getQuestionList();
+    const preloadStartQuestionIndex = Math.max(questionBank.length - PRELOAD_WINDOW_SIZE, 0);
 
     if (currentQuestion < preloadStartQuestionIndex) {
         return;
     }
 
-    const likelyPersonality = calculatePersonalityType(buildEstimatedScores());
+    const likelyPersonality = calculatePersonalityType(buildEstimatedScores(), currentVariantId);
     preloadResultImage(likelyPersonality.imageName);
 }
 
@@ -102,7 +192,7 @@ function scheduleAutoAdvance(optionIndex) {
         }
 
         if (questionIndex < questionBank.length - 1) {
-            currentQuestion++;
+            currentQuestion += 1;
             loadQuestion();
             return;
         }
@@ -111,39 +201,32 @@ function scheduleAutoAdvance(optionIndex) {
     }, AUTO_ADVANCE_DELAY);
 }
 
-// 开始测试
 function startTest() {
     clearAutoAdvanceTimer();
     currentQuestion = 0;
     answers = [];
-    scores = { W: 0, L: 0, T: 0, I: 0, Q: 0 };
+    scores = createEmptyScores();
     showPage('test-page');
     loadQuestion();
 }
 
-// 加载题目
 function loadQuestion() {
     clearAutoAdvanceTimer();
+
     const questionBank = getQuestionList();
     const question = questionBank[currentQuestion];
-    
-    // 更新进度条
     const progress = ((currentQuestion + 1) / questionBank.length) * 100;
-    document.getElementById('progress-fill').style.width = progress + '%';
     const progressBar = document.querySelector('.progress-bar');
+    const optionsContainer = document.getElementById('options');
+
+    document.getElementById('progress-fill').style.width = `${progress}%`;
     progressBar.setAttribute('aria-valuenow', String(currentQuestion + 1));
     progressBar.setAttribute('aria-valuetext', `第 ${currentQuestion + 1} 题，共 ${questionBank.length} 题`);
-    
-    // 更新题号
-    document.getElementById('current-question').textContent = currentQuestion + 1;
-    
-    // 更新题目
+    document.getElementById('current-question').textContent = String(currentQuestion + 1);
     document.getElementById('question-title').textContent = question.title;
-    
-    // 更新选项
-    const optionsContainer = document.getElementById('options');
+
     optionsContainer.innerHTML = '';
-    
+
     question.options.forEach((option, index) => {
         const optionId = `question-${question.id}-option-${index}`;
         const optionLabel = document.createElement('label');
@@ -162,168 +245,137 @@ function loadQuestion() {
         const optionText = document.createElement('span');
         optionText.className = 'option-text';
         optionText.textContent = option.text;
-        
-        // 如果已经选择过，显示选中状态
+
         if (answers[currentQuestion] === index) {
             optionLabel.classList.add('selected');
         }
-        
+
         optionLabel.appendChild(optionInput);
         optionLabel.appendChild(optionText);
         optionsContainer.appendChild(optionLabel);
     });
-    
-    // 更新按钮状态
+
     updateButtons();
     maybePreloadLikelyResult();
 }
 
-// 选择选项
 function selectOption(optionIndex) {
     answers[currentQuestion] = optionIndex;
-    
-    // 更新选中状态
-    document.querySelectorAll('.option').forEach((opt, idx) => {
-        const input = opt.querySelector('.option-input');
-        const isSelected = idx === optionIndex;
 
-        opt.classList.toggle('selected', isSelected);
+    document.querySelectorAll('.option').forEach((option, index) => {
+        const input = option.querySelector('.option-input');
+        const isSelected = index === optionIndex;
+
+        option.classList.toggle('selected', isSelected);
+
         if (input) {
             input.checked = isSelected;
         }
     });
-    
-    // 更新按钮状态
+
     updateButtons();
     maybePreloadLikelyResult();
     scheduleAutoAdvance(optionIndex);
 }
 
-// 更新按钮状态
 function updateButtons() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const questionBank = getQuestionList();
-    
-    // 上一题按钮
-    prevBtn.disabled = currentQuestion === 0;
-    
-    // 下一题按钮
     const hasAnswer = answers[currentQuestion] !== undefined;
+
+    prevBtn.disabled = currentQuestion === 0;
     nextBtn.disabled = !hasAnswer;
-    
-    // 最后一题时改变按钮文字
-    if (currentQuestion === questionBank.length - 1) {
-        nextBtn.textContent = '查看结果';
-    } else {
-        nextBtn.textContent = '下一题';
-    }
+    nextBtn.textContent = currentQuestion === questionBank.length - 1 ? '查看结果' : '下一题';
 }
 
-// 上一题
 function prevQuestion() {
     clearAutoAdvanceTimer();
+
     if (currentQuestion > 0) {
-        currentQuestion--;
+        currentQuestion -= 1;
         loadQuestion();
     }
 }
 
-// 下一题
 function nextQuestion() {
     const questionBank = getQuestionList();
+
     clearAutoAdvanceTimer();
 
     if (answers[currentQuestion] === undefined) {
         return;
     }
-    
+
     if (currentQuestion < questionBank.length - 1) {
-        currentQuestion++;
+        currentQuestion += 1;
         loadQuestion();
-    } else {
-        // 完成测试，计算结果
-        calculateResults();
-    }
-}
-
-// 计算结果
-function calculateResults() {
-    const questionBank = getQuestionList();
-    clearAutoAdvanceTimer();
-
-    // 验证是否所有题目都已回答
-    if (answers.length !== questionBank.length) {
-        alert('请完成所有题目后再查看结果！');
         return;
     }
-    
-    // 检查是否有未回答的题目
-    for (let i = 0; i < questionBank.length; i++) {
-        if (answers[i] === undefined) {
-            alert(`第 ${i + 1} 题还未回答，请完成后再查看结果！`);
-            currentQuestion = i;
+
+    calculateResults();
+}
+
+function calculateResults() {
+    const questionBank = getQuestionList();
+
+    clearAutoAdvanceTimer();
+
+    for (let index = 0; index < questionBank.length; index += 1) {
+        if (answers[index] === undefined) {
+            alert(`第 ${index + 1} 题还未回答，请完成后再查看结果！`);
+            currentQuestion = index;
             loadQuestion();
             return;
         }
     }
-    
-    // 重置分数
-    scores = { W: 0, L: 0, T: 0, I: 0, Q: 0 };
-    
-    // 累加每道题的分数
+
+    scores = createEmptyScores();
+
     answers.forEach((answerIndex, questionIndex) => {
         const question = questionBank[questionIndex];
         const selectedOption = question.options[answerIndex];
-        
-        // 累加各维度分数
-        for (const [dimension, score] of Object.entries(selectedOption.scores)) {
+
+        Object.entries(selectedOption.scores).forEach(([dimension, score]) => {
             scores[dimension] += score;
-        }
+        });
     });
-    
-    // 获取人格类型
-    const personality = calculatePersonalityType(scores);
-    
-    // 显示结果
-    showResults(personality);
+
+    showResults(calculatePersonalityType(scores, currentVariantId));
 }
 
-// 显示结果
 function showResults(personality) {
-    // 人格类型名称
     const resultImage = document.getElementById('result-image');
+    const dimensionsContainer = document.getElementById('result-dimensions');
+    const descriptionContainer = document.getElementById('result-description');
+    const traitsContainer = document.getElementById('result-traits');
+    const variant = getCurrentVariant();
+
     document.getElementById('result-type').textContent = personality.name;
     document.getElementById('result-code').textContent = personality.exactMatch
-        ? `五维代码：${personality.typeCode}`
-        : `五维代码：${personality.typeCode} · 参考原型：${personality.matchedTypeCode}`;
+        ? `五维代码：${personality.typeCode} · ${variant.shortLabel}`
+        : `五维代码：${personality.typeCode} · ${variant.shortLabel} · 参考原型：${personality.matchedTypeCode}`;
     setResultImage(resultImage, personality.imageName, `${personality.name} 结果配图`);
-    
-    const dimensionQuestionCounts = getDimensionQuestionCounts();
 
-    // 五维数据
-    const dimensionsContainer = document.getElementById('result-dimensions');
     dimensionsContainer.innerHTML = '';
 
     dimensionOrder.forEach(code => {
-        const level = getLevel(scores[code], dimensionQuestionCounts[code]);
         const dimensionDiv = document.createElement('div');
         dimensionDiv.className = 'dimension';
+
         const dimensionLabel = document.createElement('div');
         dimensionLabel.className = 'dimension-label';
         dimensionLabel.textContent = getDimensionName(code);
 
         const dimensionValue = document.createElement('div');
         dimensionValue.className = 'dimension-value';
-        dimensionValue.textContent = getLevelName(level);
+        dimensionValue.textContent = getLevelName(getDimensionLevel(scores[code], code, currentVariantId));
 
         dimensionDiv.appendChild(dimensionLabel);
         dimensionDiv.appendChild(dimensionValue);
         dimensionsContainer.appendChild(dimensionDiv);
     });
-    
-    // 描述
-    const descriptionContainer = document.getElementById('result-description');
+
     descriptionContainer.innerHTML = '';
 
     const descriptionTitle = document.createElement('h3');
@@ -347,9 +399,7 @@ function showResults(personality) {
         quoteText.textContent = personality.quote;
         descriptionContainer.appendChild(quoteText);
     }
-    
-    // 特质标签
-    const traitsContainer = document.getElementById('result-traits');
+
     traitsContainer.innerHTML = '';
     personality.traits.forEach(trait => {
         const traitTag = document.createElement('span');
@@ -357,54 +407,47 @@ function showResults(personality) {
         traitTag.textContent = trait;
         traitsContainer.appendChild(traitTag);
     });
-    
-    // 显示结果页面
+
     showPage('result-page');
 }
 
-// 分享结果
 function shareResult() {
     const resultType = document.getElementById('result-type').textContent;
     const shareText = `我在WLTI测试中是【${resultType}】！快来测测你是哪种王蕾！`;
-    
-    // 尝试使用 Web Share API
+
     if (navigator.share) {
         navigator.share({
             title: 'WLTI测试结果',
             text: shareText,
             url: window.location.href
-        }).catch(err => {
-            console.log('分享失败:', err);
+        }).catch(error => {
+            console.log('分享失败:', error);
             copyToClipboard(shareText);
         });
-    } else {
-        // 降级方案：复制到剪贴板
-        copyToClipboard(shareText);
+        return;
     }
+
+    copyToClipboard(shareText);
 }
 
-// 复制到剪贴板
 function copyToClipboard(text) {
-    const fullText = text + '\n' + window.location.href;
-    
-    // 优先使用现代 Clipboard API
+    const fullText = `${text}\n${window.location.href}`;
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(fullText)
             .then(() => {
                 alert('结果已复制到剪贴板！');
             })
-            .catch(err => {
-                console.error('复制失败:', err);
-                // 降级到传统方法
+            .catch(error => {
+                console.error('复制失败:', error);
                 fallbackCopyToClipboard(fullText);
             });
-    } else {
-        // 降级到传统方法
-        fallbackCopyToClipboard(fullText);
+        return;
     }
+
+    fallbackCopyToClipboard(fullText);
 }
 
-// 传统复制方法（降级方案）
 function fallbackCopyToClipboard(text) {
     const textarea = document.createElement('textarea');
     textarea.value = text;
@@ -412,29 +455,29 @@ function fallbackCopyToClipboard(text) {
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
     textarea.select();
-    
+
     try {
         document.execCommand('copy');
         alert('结果已复制到剪贴板！');
-    } catch (err) {
-        console.error('复制失败:', err);
-        alert('复制失败，请手动复制：\n' + text);
+    } catch (error) {
+        console.error('复制失败:', error);
+        alert(`复制失败，请手动复制：\n${text}`);
     }
-    
+
     document.body.removeChild(textarea);
 }
 
-// 重新测试
 function restartTest() {
     clearAutoAdvanceTimer();
+    answers = [];
+    scores = createEmptyScores();
+    currentQuestion = 0;
     showPage('start-page');
+    updateVariantSummary();
 }
 
-// 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    const questionCount = String(getQuestionList().length);
-    document.getElementById('question-count').textContent = questionCount;
-    document.getElementById('total-questions').textContent = questionCount;
-    document.querySelector('.progress-bar').setAttribute('aria-valuemax', questionCount);
+    renderVariantOptions();
+    updateVariantSummary();
     showPage('start-page');
 });

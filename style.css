@@ -230,6 +230,82 @@ body {
     margin-bottom: 36px;
 }
 
+.variant-selector {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin: 0 auto 28px;
+    max-width: 640px;
+    box-shadow: var(--shadow-md);
+}
+
+.variant-selector-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+}
+
+.variant-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.variant-card {
+    border: 1px solid rgba(255, 107, 157, 0.18);
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-md);
+    padding: 16px 14px;
+    text-align: left;
+    font: inherit;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 112px;
+}
+
+.variant-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.variant-card.is-active {
+    background: linear-gradient(135deg, rgba(255, 107, 157, 0.16), rgba(196, 69, 105, 0.1));
+    border-color: var(--secondary);
+    box-shadow: var(--shadow-sm);
+}
+
+.variant-card:focus-visible {
+    outline: 3px solid rgba(196, 69, 105, 0.22);
+    outline-offset: 3px;
+}
+
+.variant-card-label {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.variant-card-meta {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.variant-caption {
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
 /* Buttons */
 .btn-primary, .btn-secondary {
     display: inline-flex;
@@ -828,6 +904,8 @@ footer p {
     .main-title { font-size: 22px; }
     .subtitle { font-size: 14px; }
     .description { font-size: 16px; }
+    .variant-grid { grid-template-columns: 1fr; }
+    .variant-card { min-height: auto; }
     .question-container { padding: 28px 24px; min-height: auto; }
     .question-title { font-size: 18px; }
     .option { padding: 16px; font-size: 14px; }
