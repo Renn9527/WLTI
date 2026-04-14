@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WLTI - 王蕾倾向指数测试</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="floating-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+
+    <div class="container">
+        <!-- 开始页面 -->
+        <div id="start-page" class="page active">
+            <div class="logo-wrapper">
+                <div class="logo-glow"></div>
+                <div class="logo">WLTI</div>
+            </div>
+            <h1 class="main-title">王蕾倾向指数测试</h1>
+            <p class="subtitle">MBTI过时了，SBTI过时了，CSTI过时了——WLTI的时代来了</p>
+            <p class="description">来看看你是哪种王蕾！</p>
+            <button class="btn-primary" onclick="startTest()">开始测试</button>
+            <div class="info">
+                <p>📊 共<span id="question-count">25</span>道题</p>
+                <p>⏱️ 预计用时5分钟</p>
+                <p>🎯 测试你的王蕾人格类型</p>
+            </div>
+        </div>
+
+        <!-- 测试页面 -->
+        <div id="test-page" class="page">
+            <div class="progress-bar" role="progressbar" aria-label="答题进度" aria-valuemin="1" aria-valuemax="25" aria-valuenow="1">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="question-counter">
+                <span id="current-question">1</span> / <span id="total-questions">25</span>
+            </div>
+            <div class="question-container">
+                <h2 class="question-title" id="question-title"></h2>
+                <div class="options" id="options" role="radiogroup" aria-labelledby="question-title"></div>
+            </div>
+            <div class="navigation">
+                <button class="btn-secondary" id="prev-btn" onclick="prevQuestion()" disabled>上一题</button>
+                <button class="btn-primary" id="next-btn" onclick="nextQuestion()" disabled>下一题</button>
+            </div>
+        </div>
+
+        <!-- 结果页面 -->
+        <div id="result-page" class="page">
+            <div class="result-container">
+                <div class="result-media">
+                    <img id="result-image" class="result-image" alt="">
+                </div>
+                <h1 class="result-type" id="result-type"></h1>
+                <p class="result-code" id="result-code"></p>
+                <div class="result-dimensions" id="result-dimensions"></div>
+                <div class="result-description" id="result-description"></div>
+                <div class="result-traits" id="result-traits"></div>
+                <div class="share-section">
+                    <button class="btn-primary" onclick="shareResult()">分享结果</button>
+                    <button class="btn-secondary" onclick="restartTest()">重新测试</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>灵感来源：<a href="https://pingfanfan.github.io/SBTI/" target="_blank" rel="noreferrer">SBTI</a></p>
+        <p>致敬碳眠无郎  作者：单核单线程</p>
+    </footer>
+
+    <script src="questions.js"></script>
+    <script src="results.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

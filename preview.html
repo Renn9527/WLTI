@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WLTI - 结果预览页</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="preview-page">
+    <div class="floating-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+
+    <div class="container preview-container">
+        <div class="preview-shell">
+            <aside class="preview-sidebar">
+                <a class="preview-link" href="index.html">返回测试首页</a>
+                <h1 class="preview-title">结果预览页</h1>
+                <p class="preview-hint">点击 20 种固定结果，直接检查结果卡片在不同宽度下会不会崩。</p>
+
+                <div class="preview-toggle-group" aria-label="预览宽度切换">
+                    <button type="button" class="preview-toggle is-active" data-preview-mode="desktop">桌面</button>
+                    <button type="button" class="preview-toggle" data-preview-mode="mobile">手机</button>
+                </div>
+
+                <div class="preview-controls" id="preview-controls"></div>
+            </aside>
+
+            <main class="preview-main">
+                <div class="preview-stage" id="preview-stage" data-preview-mode="desktop">
+                    <div class="result-container preview-result">
+                        <div class="result-media">
+                            <img id="result-image" class="result-image" alt="">
+                        </div>
+                        <h1 class="result-type" id="result-type"></h1>
+                        <p class="result-code" id="result-code"></p>
+                        <div class="result-dimensions" id="result-dimensions"></div>
+                        <div class="result-description" id="result-description"></div>
+                        <div class="result-traits" id="result-traits"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="results.js"></script>
+    <script src="preview.js"></script>
+</body>
+</html>
