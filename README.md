@@ -53,13 +53,16 @@ WLTI（Wang Lei Tendency Index）是一个致敬抖音CS女主播碳眠无郎（
 可选地运行：
 
 ```bash
+node scripts/generate-quiz-variants.js
 node scripts/standardize-result-images.js
 node scripts/validate.js
 ```
 
-第一条会把 `photo` 中的结果图统一生成成 1200x1200 的 JPG，并把原图备份到 `photo/_source/`。
+第一条会根据题库重新生成 `quiz-variants.js`，同步三档题量版本的题目列表、分档阈值和均衡分布参数。
 
-第二条会检查脚本语法、题库与人格数据的一致性、结果图规格，以及 `index.html` 中页面挂载点和脚本顺序是否满足当前实现。
+第二条会把 `photo` 中的结果图统一生成成 1200x1200 的 JPG，并把原图备份到 `photo/_source/`。
+
+第三条会检查脚本语法、题库与人格数据的一致性、结果图规格，以及 `index.html` 中页面挂载点和脚本顺序是否满足当前实现。
 
 ## 部署到GitHub Pages
 
@@ -74,21 +77,24 @@ node scripts/validate.js
 
 ```
 WLTI/
-├── index.html          # 主页面
-├── style.css           # 样式文件
-├── app.js              # 主逻辑
-├── questions.js        # 题目数据
-├── results.js          # 结果计算和人格类型数据
-├── README.md           # 项目说明
-├── 设定集.md           # 人格类型设定
-├── 资料.md             # 王蕾相关资料
-└── WLTI题目设计.md     # 题目设计文档
+├── index.html                  # 主页面
+├── preview.html                # 20种结果预览页
+├── style.css                   # 样式文件
+├── app.js                      # 主逻辑
+├── preview.js                  # 结果预览页逻辑
+├── questions.js                # 题目数据
+├── quiz-variants.js            # 三档题量版本与均衡参数
+├── results.js                  # 结果计算和人格类型数据
+├── photo/                      # 20张结果配图
+├── scripts/                    # 生成与校验脚本
+├── README.md                   # 项目说明
+└── LICENSE                     # 开源协议
 ```
 
 ## 自定义
 
 ### 修改题目
-编辑 `questions.js` 文件，按照现有格式添加或修改题目。
+编辑 `questions.js` 文件，按照现有格式添加或修改题目；改完后记得重新运行 `node scripts/generate-quiz-variants.js` 和 `node scripts/validate.js`。
 
 ### 修改人格类型
 编辑 `results.js` 文件，修改 `personalityTypes` 对象。
