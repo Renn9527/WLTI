@@ -8,6 +8,8 @@ WLTI（Wang Lei Tendency Index）是一个致敬抖音CS女主播碳眠无郎（
 
 灵感来源：[SBTI项目](https://pingfanfan.github.io/SBTI/)
 
+在线体验：https://renn9527.github.io/WLTI/
+
 ## 五大维度
 
 - **W - 抽象度**
@@ -60,6 +62,8 @@ node scripts/validate.js
 第二条会检查脚本语法、题库与人格数据的一致性、结果图规格，以及 `index.html` 中页面挂载点和脚本顺序是否满足当前实现。
 
 ## 部署到GitHub Pages
+
+当前项目地址：https://renn9527.github.io/WLTI/
 
 1. Fork本项目
 2. 进入仓库设置 Settings > Pages
